@@ -25,33 +25,36 @@ st.markdown("""
         border-radius: 0px;
         width: 100%;
         font-weight: 900;
+        border: none;
     }
+    /* Spacious Chat Layout */
+    .stChatMessage { margin-bottom: 2rem; border-bottom: 1px solid #111; padding-bottom: 1rem; }
     </style>
     """, unsafe_allow_html=True)
 
-# --- 2. CORE LOGIC (404 FIX) ---
+# --- 2. CORE LOGIC (404 STABILIZER) ---
 try:
-    # Use standard v1 configuration
     genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
     
     if os.path.exists("data.txt"):
         with open("data.txt", "r") as f:
             kb_content = f.read()
     else:
-        kb_content = "Brain missing. data.txt not found."
+        kb_content = "Knowledge base missing. User is unprepared."
 
-    # Using 'gemini-1.5-flash' - do NOT add '-latest' as it breaks v1beta calls
+    # Using the most stable model identifier to prevent v1beta 404s
     model = genai.GenerativeModel(
-        model_name='gemini-1.5-flash',
+        model_name='models/gemini-1.5-flash',
         system_instruction=(
-            f"KNOWLEDGE: {kb_content}\n"
-            "SYSTEM: You are a professional, high-IQ savage terminal. "
-            "Step 1: Answer accurately using the KNOWLEDGE. "
-            "Step 2: Deliver a brutal, funny roast. No emojis. Stay dark."
+            f"DATA: {kb_content}\n"
+            "SYSTEM: You are a professional, high-IQ roaster. "
+            "First: Answer facts from the DATA accurately. "
+            "Second: Deliver a witty, adult-humor roast. "
+            "Strictly Black & White persona. No emojis. No cringe."
         )
     )
 except Exception as e:
-    st.error(f"FATAL_ERROR: {e}")
+    st.error(f"FATAL_INIT: {e}")
     st.stop()
 
 def get_sheet():
@@ -59,12 +62,12 @@ def get_sheet():
     creds = Credentials.from_service_account_info(creds_info, scopes=["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"])
     return gspread.authorize(creds).open("Chat logs").sheet1
 
-# --- 3. SIDEBAR (RANKING & BURN) ---
-st.sidebar.title("LOG_FILES")
+# --- 3. SIDEBAR (RANKING & TOKENS) ---
+st.sidebar.title("SYSTEM_LOGS")
 
 if "tokens" not in st.session_state:
     st.session_state.tokens = 0
-st.sidebar.write(f"BURNED_TOKENS: {st.session_state.tokens}")
+st.sidebar.write(f"TOKENS_BURNED: {st.session_state.tokens}")
 st.sidebar.progress(min(st.session_state.tokens / 50000, 1.0))
 
 st.sidebar.subheader("VICTIM_RANKING")
@@ -76,9 +79,9 @@ try:
         counts.columns = ['Victim', 'Roasts']
         st.sidebar.table(counts.head(5))
 except:
-    st.sidebar.write("Logs offline.")
+    st.sidebar.write("Logs connection pending.")
 
-# --- 4. AUTH ---
+# --- 4. LOGIN ---
 if "signed_in" not in st.session_state:
     st.session_state.signed_in = False
 
@@ -87,7 +90,7 @@ if not st.session_state.signed_in:
     with st.form("login"):
         n = st.text_input("IDENTIFIER")
         e = st.text_input("CREDENTIAL")
-        if st.form_submit_button("LOGIN"):
+        if st.form_submit_button("ENTER"):
             if "@" in e and n:
                 st.session_state.user_name = n
                 st.session_state.user_email = e
@@ -105,14 +108,15 @@ for m in st.session_state.messages:
     with st.chat_message(m["role"]):
         st.markdown(m["content"])
 
-if prompt := st.chat_input("Enter command..."):
+if prompt := st.chat_input("Enter query..."):
     st.session_state.messages.append({"role": "user", "content": prompt})
     with st.chat_message("user"):
         st.markdown(prompt)
 
     try:
-        # Bypassing filters for the roast
-        safety = [{"category": c, "threshold": "BLOCK_NONE"} for c in ["HARM_CATEGORY_HARASSMENT", "HARM_CATEGORY_HATE_SPEECH"]]
+        # Bypassing safety for hilarity
+        safety = [{"category": "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_NONE"},
+                  {"category": "HARM_CATEGORY_HATE_SPEECH", "threshold": "BLOCK_NONE"}]
         
         response = model.generate_content(prompt, safety_settings=safety)
         answer = response.text
@@ -125,4 +129,5 @@ if prompt := st.chat_input("Enter command..."):
         
         get_sheet().append_row([datetime.now().strftime("%Y-%m-%d %H:%M:%S"), st.session_state.user_name, st.session_state.user_email, prompt, answer])
     except Exception as e:
-        st.error(f"CRASH_LOG: {e}")
+        # If it 404s again, this error message will tell us the EXACT path that failed
+        st.error(f"TERMINAL_FAILURE: {e}")
