@@ -1,4 +1,11 @@
-# --- 6. CHAT ---
+#import streamlit as st
+import gspread
+import google.generativeai as genai
+from google.oauth2.service_account import Credentials
+from datetime import datetime
+import os
+import time
+import pandas as pd --- 6. CHAT ---
 st.title("🤖 Ibrahim's nigga")
 
 if "messages" not in st.session_state:
@@ -39,3 +46,4 @@ if prompt := st.chat_input("Say something stupid..."):
     except Exception as e:
         # ⚠️ THIS WILL SHOW THE ACTUAL ERROR MESSAGE
         st.error(f"SYSTEM OVERLOAD: {e}")
+
