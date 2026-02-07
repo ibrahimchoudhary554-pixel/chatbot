@@ -14,15 +14,14 @@ if prompt := st.chat_input("Say something stupid..."):
         st.markdown(prompt)
 
     try:
-        # Disable safety filters so the bot can actually be savage
+        # 🔓 BYPASS SAFETY FILTERS so the roast actually works
         safety_settings = [
             {"category": "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_NONE"},
             {"category": "HARM_CATEGORY_HATE_SPEECH", "threshold": "BLOCK_NONE"},
-            {"category": "HARM_CATEGORY_SEXUALLY_EXPLICIT", "threshold": "BLOCK_NONE"},
             {"category": "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold": "BLOCK_NONE"},
+            {"category": "HARM_CATEGORY_SEXUALLY_EXPLICIT", "threshold": "BLOCK_NONE"},
         ]
 
-        # Generate content with the loose safety settings
         response = model.generate_content(prompt, safety_settings=safety_settings)
         
         if response.text:
@@ -35,8 +34,8 @@ if prompt := st.chat_input("Say something stupid..."):
             timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             get_sheet().append_row([timestamp, st.session_state.user_name, st.session_state.user_email, prompt, answer])
         else:
-            st.warning("The AI was so offended by your face it stayed silent. Try again.")
+            st.warning("The AI was so offended by your face it stayed silent. Try a different prompt.")
 
     except Exception as e:
-        # Show the REAL error so we can fix it
+        # ⚠️ THIS WILL SHOW THE ACTUAL ERROR MESSAGE
         st.error(f"SYSTEM OVERLOAD: {e}")
