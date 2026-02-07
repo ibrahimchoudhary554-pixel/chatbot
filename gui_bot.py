@@ -10,7 +10,7 @@ import pandas as pd
 # --- 1. PAGE CONFIG ---
 st.set_page_config(page_title="Ibrahim's Roast Dungeon", page_icon="💀")
 
-# --- 2. INITIALIZE GEMINI & TOKEN TRACKER ---
+# --- 2. INITIALIZE GEMINI (Nuclear Level) ---
 try:
     genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
     
@@ -18,17 +18,16 @@ try:
         with open("data.txt", "r") as f:
             kb = f.read()
     else:
-        kb = "The user is too lazy to upload data.txt."
+        kb = "User is too incompetent to provide data."
 
-    # Estimate tokens: ~4 chars per token
-    kb_tokens = len(kb) // 4 
-    
     savage_logic = (
         f"KNOWLEDGE: {kb}\n"
-        "PERSONALITY: You are 'Ibrahim's nigga'. You are aggressive, offensive, and savage. "
+        "PERSONALITY: You are 'Ibrahim's nigga'. You are an aggressive, offensive, and savage AI. "
         "Every response MUST: \n"
-        "1. Answer from the KNOWLEDGE BASE first.\n"
-        "2. Deliver a brutal roast. Never be nice.\n"
+        "1. Answer from the KNOWLEDGE BASE first (be accurate).\n"
+        "2. Follow up with a brutal, adult-humor roast.\n"
+        "3. Be as offensive and funny as possible without getting the account banned.\n"
+        "4. Mock their name, their questions, and their life choices."
     )
     
     model = genai.GenerativeModel(
@@ -39,7 +38,7 @@ except Exception as e:
     st.error(f"Setup Error: {e}")
     st.stop()
 
-# --- 3. LOGGING & DATA FUNCTIONS ---
+# --- 3. GOOGLE SHEETS & LEADERBOARD LOGIC ---
 def get_sheet():
     scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
     creds_info = st.secrets["gcp_service_account"]
@@ -47,39 +46,25 @@ def get_sheet():
     gc = gspread.authorize(creds)
     return gc.open("Chat logs").sheet1
 
-# --- 4. SIDEBAR: THE FUEL GAUGE & LEADERBOARD ---
-st.sidebar.title("💀 Roast Dashboard")
+def log_to_sheet(name, email, user_msg, bot_msg):
+    try:
+        time.sleep(1) # Protect against 403 ban
+        sheet = get_sheet()
+        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        sheet.append_row([timestamp, name, email, user_msg, bot_msg])
+    except:
+        pass
 
-# Token Counter
-st.sidebar.subheader("🔥 Insult Fuel")
-token_usage_pct = min((kb_tokens / 1000000) * 100, 100) # Against 1M TPM limit
-st.sidebar.progress(token_usage_pct / 100)
-st.sidebar.write(f"Knowledge Base: ~{kb_tokens} tokens")
-st.sidebar.caption("If this hits 100%, the AI will stop responding.")
-
-# Hall of Losers
-st.sidebar.divider()
-st.sidebar.subheader("🏆 Hall of Losers")
-try:
-    sheet = get_sheet()
-    df = pd.DataFrame(sheet.get_all_records())
-    if not df.empty:
-        counts = df['Name'].value_counts().reset_index()
-        counts.columns = ['Victim', 'Roasts']
-        st.sidebar.table(counts.head(5))
-except:
-    st.sidebar.write("Leaderboard is offline.")
-
-# --- 5. CHAT SYSTEM ---
+# --- 4. LOGIN ---
 if "signed_in" not in st.session_state:
     st.session_state.signed_in = False
 
 if not st.session_state.signed_in:
-    st.title("🔥 Ibrahim's Roast Den")
+    st.title("💀 Welcome to the Dungeon")
     with st.form("login"):
-        n = st.text_input("Name")
+        n = st.text_input("Name (Victim)")
         e = st.text_input("Email")
-        if st.form_submit_button("Start the Pain"):
+        if st.form_submit_button("Start the Abuse"):
             if "@" in e and len(n) > 1:
                 st.session_state.user_name = n
                 st.session_state.user_email = e
@@ -87,7 +72,25 @@ if not st.session_state.signed_in:
                 st.rerun()
     st.stop()
 
+# --- 5. SIDEBAR LEADERBOARD ---
+st.sidebar.title("🏆 Hall of Losers")
+try:
+    sheet = get_sheet()
+    data = sheet.get_all_records()
+    if data:
+        df = pd.DataFrame(data)
+        # Count roasts per name
+        counts = df['Name'].value_counts().reset_index()
+        counts.columns = ['Victim', 'Roasts Received']
+        st.sidebar.table(counts.head(5))
+except:
+    st.sidebar.write("Leaderboard is broken, just like your life.")
+
+# --- 6. CHAT INTERFACE ---
 st.title("🤖 Ibrahim's nigga")
+if st.sidebar.button("Cry & Logout"):
+    st.session_state.signed_in = False
+    st.rerun()
 
 if "messages" not in st.session_state:
     st.session_state.messages = []
@@ -104,14 +107,9 @@ if prompt := st.chat_input("Say something stupid..."):
     try:
         response = model.generate_content(prompt)
         answer = response.text
-        
         with st.chat_message("assistant"):
             st.markdown(answer)
         st.session_state.messages.append({"role": "assistant", "content": answer})
-        
-        # Log to Sheet
-        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        get_sheet().append_row([timestamp, st.session_state.user_name, st.session_state.user_email, prompt, answer])
-        
-    except Exception as e:
-        st.error("AI is dead. You probably exceeded your free token limit for the minute.")
+        log_to_sheet(st.session_state.user_name, st.session_state.user_email, prompt, answer)
+    except:
+        st.error("AI is busy laughing at you. Try again.")
