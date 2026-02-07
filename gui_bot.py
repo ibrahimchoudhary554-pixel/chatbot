@@ -27,14 +27,12 @@ st.markdown("""
         font-weight: 900;
         border: none;
     }
-    /* Spacious Layout */
     .stChatMessage { margin-bottom: 1.5rem; }
     </style>
     """, unsafe_allow_html=True)
 
-# --- 2. THE ENGINE SWAP (GEMINI 1.5 PRO) ---
+# --- 2. STABLE ENGINE CONFIG ---
 try:
-    # Force stable v1 configuration to stop the 404 v1beta cycle
     genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
     
     kb_content = ""
@@ -42,15 +40,15 @@ try:
         with open("data.txt", "r") as f:
             kb_content = f.read()
 
-    # SWAPPED TO PRO MODEL: More stable, less likely to 404 on newer API calls
+    # Using Pro model to ensure stability and bypass beta path errors
     model = genai.GenerativeModel(
         model_name='gemini-1.5-pro',
         system_instruction=(
             f"KNOWLEDGE: {kb_content}\n"
             "ROLE: You are an elite, savage terminal. "
-            "1. Answer queries accurately using the KNOWLEDGE. "
+            "1. Answer accurately using the KNOWLEDGE. "
             "2. Follow with a brutal, witty, adult-humor roast. "
-            "3. Strictly Noir (Black/White). No emojis. No fluff."
+            "3. Strictly Noir. No emojis. No fluff."
         )
     )
 except Exception as e:
@@ -62,13 +60,12 @@ def get_sheet():
     creds = Credentials.from_service_account_info(creds_info, scopes=["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"])
     return gspread.authorize(creds).open("Chat logs").sheet1
 
-# --- 3. SIDEBAR (SCOREBOARD & BURN) ---
+# --- 3. SIDEBAR ---
 st.sidebar.title("SYSTEM_LOGS")
 
 if "tokens" not in st.session_state:
     st.session_state.tokens = 0
 st.sidebar.write(f"BURNED_TOKENS: {st.session_state.tokens}")
-st.sidebar.progress(min(st.session_state.tokens / 100000, 1.0))
 
 st.sidebar.subheader("VICTIM_RANKING")
 try:
@@ -105,13 +102,12 @@ for m in st.session_state.messages:
     with st.chat_message(m["role"]):
         st.markdown(m["content"])
 
-if prompt := st.chat_input("Input query..."):
+if prompt := st.chat_input("Input command..."):
     st.session_state.messages.append({"role": "user", "content": prompt})
     with st.chat_message("user"):
         st.markdown(prompt)
 
     try:
-        # Noir Safety Settings
         safety = [{"category": "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_NONE"},
                   {"category": "HARM_CATEGORY_HATE_SPEECH", "threshold": "BLOCK_NONE"}]
         
