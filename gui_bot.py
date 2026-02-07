@@ -11,50 +11,63 @@ st.set_page_config(page_title="Terminal", layout="wide")
 
 st.markdown("""
     <style>
+    /* High Contrast Black & White */
     .stApp { background-color: #000000; color: #FFFFFF; }
     section[data-testid="stSidebar"] { 
         background-color: #050505 !important; 
-        border-right: 1px solid #222222; 
+        border-right: 1px solid #1A1A1A; 
     }
-    .stChatInputContainer { border-top: 1px solid #222222 !important; }
-    h1, h2, h3 { font-family: 'Inter', sans-serif; letter-spacing: -1px; }
-    /* Modern Scoreboard Table */
-    .stTable { background-color: #000000; color: #FFFFFF; border: 1px solid #222222; }
-    /* Noir Button */
+    .stChatInputContainer { border-top: 1px solid #1A1A1A !important; }
+    
+    /* Clean Typography */
+    h1, h2, h3, p, span, label { 
+        font-family: 'Inter', sans-serif !important;
+        color: #FFFFFF !important;
+    }
+
+    /* Scoreboard Styling */
+    .stTable { 
+        background-color: #000000; 
+        border: 1px solid #333333;
+    }
+
+    /* Modern Minimalist Button */
     .stButton>button {
         background-color: #FFFFFF !important;
         color: #000000 !important;
         border-radius: 0px;
-        width: 100%;
-        font-weight: bold;
         border: none;
+        width: 100%;
+        font-weight: 900;
+        letter-spacing: 1px;
     }
     </style>
     """, unsafe_allow_html=True)
 
-# --- 2. THE BRAIN ---
+# --- 2. THE BRAIN (404 FIX) ---
 try:
-    # FIXED: Using standard configuration to avoid 404 v1beta errors
+    # We use the standard config to avoid v1beta errors
     genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
     
     if os.path.exists("data.txt"):
         with open("data.txt", "r") as f:
             kb_content = f.read()
     else:
-        kb_content = "Knowledge base empty."
+        kb_content = "The data file is missing, just like the user's brain cells."
 
-    # Using the stable model name
+    # Using the stable model identifier
     model = genai.GenerativeModel(
-        model_name='gemini-1.5-flash', 
+        model_name='gemini-1.5-flash',
         system_instruction=(
-            f"CONTEXT: {kb_content}\n"
-            "ROLE: You are a cold, professional, yet hilariously savage AI. "
-            "First, answer the question accurately using the CONTEXT. "
-            "Second, deliver a brutal, witty roast. No emojis. Stay dark."
+            f"KNOWLEDGE_BASE: {kb_content}\n"
+            "ROLE: You are an elite, professional, yet absolutely savage AI terminal. "
+            "1. Answer queries accurately using the KNOWLEDGE_BASE. "
+            "2. Follow every answer with a high-IQ, brutal roast. "
+            "3. Zero emojis. Strictly black-and-white humor. Be hilarious but mean."
         )
     )
 except Exception as e:
-    st.error(f"INITIALIZATION_ERROR: {e}")
+    st.error(f"FATAL_ERROR: {e}")
     st.stop()
 
 def get_sheet():
@@ -62,37 +75,37 @@ def get_sheet():
     creds = Credentials.from_service_account_info(creds_info, scopes=["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"])
     return gspread.authorize(creds).open("Chat logs").sheet1
 
-# --- 3. SIDEBAR (SCOREBOARD & TOKENS) ---
-st.sidebar.title("SYSTEM_LOGS")
+# --- 3. SIDEBAR (LOGS & TOKENS) ---
+st.sidebar.title("SYSTEM_RESOURCES")
 
-# Token Counter (Estimated)
+# Token Counter (Simulated)
 if "tokens" not in st.session_state:
     st.session_state.tokens = 0
-st.sidebar.write(f"TOKENS_USED: {st.session_state.tokens}")
+st.sidebar.write(f"TOKENS_BURNED: {st.session_state.tokens}")
 st.sidebar.progress(min(st.session_state.tokens / 50000, 1.0))
 
-# Hall of Losers (Scoreboard)
+# Roast Scoreboard (Hall of Losers)
 st.sidebar.subheader("VICTIM_RANKING")
 try:
     data = get_sheet().get_all_records()
     if data:
         df = pd.DataFrame(data)
         counts = df['Name'].value_counts().reset_index()
-        counts.columns = ['Victim', 'Total_Roasts']
+        counts.columns = ['Victim', 'Roasts']
         st.sidebar.table(counts.head(5))
 except:
-    st.sidebar.write("Logs inaccessible.")
+    st.sidebar.write("Leaderboard currently offline.")
 
-# --- 4. AUTHENTICATION ---
+# --- 4. AUTH ---
 if "signed_in" not in st.session_state:
     st.session_state.signed_in = False
 
 if not st.session_state.signed_in:
-    st.title("ACCESS_REQUIRED")
+    st.title("AUTHENTICATION_REQUIRED")
     with st.form("login"):
-        n = st.text_input("NAME")
-        e = st.text_input("EMAIL")
-        if st.form_submit_button("CONNECT"):
+        n = st.text_input("IDENTIFIER (NAME)")
+        e = st.text_input("CREDENTIAL (EMAIL)")
+        if st.form_submit_button("ESTABLISH_CONNECTION"):
             if "@" in e and n:
                 st.session_state.user_name = n
                 st.session_state.user_email = e
@@ -100,8 +113,8 @@ if not st.session_state.signed_in:
                 st.rerun()
     st.stop()
 
-# --- 5. TERMINAL ---
-st.title("TERMINAL_INTERFACE")
+# --- 5. CHAT TERMINAL ---
+st.title("COMMAND_LINE_INTERFACE")
 
 if "messages" not in st.session_state:
     st.session_state.messages = []
@@ -110,13 +123,13 @@ for m in st.session_state.messages:
     with st.chat_message(m["role"]):
         st.markdown(m["content"])
 
-if prompt := st.chat_input("Input command..."):
+if prompt := st.chat_input("Enter command..."):
     st.session_state.messages.append({"role": "user", "content": prompt})
     with st.chat_message("user"):
         st.markdown(prompt)
 
     try:
-        # Strict Noir Safety
+        # Safety settings to allow the roast to happen
         safety = [
             {"category": "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_NONE"},
             {"category": "HARM_CATEGORY_HATE_SPEECH", "threshold": "BLOCK_NONE"},
@@ -125,7 +138,7 @@ if prompt := st.chat_input("Input command..."):
         response = model.generate_content(prompt, safety_settings=safety)
         answer = response.text
         
-        # Update Tokens
+        # Update Tokens (Approximate)
         st.session_state.tokens += (len(prompt) + len(answer)) // 4
         
         with st.chat_message("assistant"):
