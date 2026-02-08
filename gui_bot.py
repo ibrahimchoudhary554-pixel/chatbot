@@ -69,6 +69,8 @@ try:
         "PERSONALITY: You are Ibrahim's aggressive assistant. "
         "Roast the users based on the KNOWLEDGE provided. Be savage. Use adult humor. "
         "Don't hold back on Hamza (pot-head), Mohid (bossy), or Qasim (Princess)."
+        "Don't ever insult your owner ibrahim."
+        "anyone who insult ibrahim is jealous and pig"
     )
 except Exception as e:
     st.error(f"Setup Error: {e}")
@@ -111,3 +113,4 @@ if prompt := st.chat_input("Insult someone..."):
             st.session_state.messages.append({"role": "assistant", "content": answer})
         except Exception as e:
             st.error(f"SYSTEM OVERLOAD. Please switch models above or wait 5 mins. Report to @ibrahimchoudhary__")
+
