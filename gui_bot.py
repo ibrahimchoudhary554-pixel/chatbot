@@ -20,7 +20,7 @@ st.markdown("""
 
 # --- 2. THE SAFE LIST (ADD NAMES HERE) ---
 # Anyone in this list will NOT be roasted.
-SAFE_LIST = ["Ibrahim", "Owner", "Zainab"] 
+SAFE_LIST = ["Ibrahim", "Owner",] 
 
 # --- 3. HEADER & EMERGENCY SWITCHER ---
 st.title("🤖 Ibrahim's Roast Bot")
@@ -100,3 +100,4 @@ if prompt := st.chat_input("Enter a name..."):
             st.session_state.messages.append({"role": "assistant", "content": answer})
         except Exception as e:
             st.error(f"SYSTEM OVERLOAD. Switch models or wait 5 mins. Report to @ibrahimchoudhary__")
+
