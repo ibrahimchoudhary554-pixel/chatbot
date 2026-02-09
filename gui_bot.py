@@ -20,7 +20,7 @@ st.markdown("""
 
 # --- 2. THE SAFE LIST (ADD NAMES HERE) ---
 # Anyone in this list will NOT be roasted.
-SAFE_LIST = ["Ibrahim", "Owner",] 
+SAFE_LIST = ["Ibrahim", "Owner", "Zainab", "ibrahim", "zainab"] 
 
 # --- 3. HEADER & EMERGENCY SWITCHER ---
 st.title("🤖 Ibrahim's Roast Bot")
@@ -36,36 +36,14 @@ with st.container():
     )
     st.markdown('</div>', unsafe_allow_html=True)
 
-# --- 4. INITIALIZE CLIENT ---
-try:
-    client = OpenAI(base_url="https://router.huggingface.co/v1", api_key=st.secrets["HF_TOKEN"])
-    
-    if os.path.exists("data.txt"):
-        with open("data.txt", "r") as f:
-            kb = f.read()
-    else:
-        kb = "Data file missing. Ibrahim's targets are lucky today."
+# --- 4. DATA LOADING ---
+if os.path.exists("data.txt"):
+    with open("data.txt", "r") as f:
+        kb = f.read()
+else:
+    kb = "Data file missing."
 
-    # BASE LOGIC
-    savage_logic = (
-        f"KNOWLEDGE: {kb}\n"
-        "INSTRUCTIONS: You are Ibrahim's loyal but aggressive assistant. "
-        "1. If the user mentions anyone in this SAFE LIST: {SAFE_LIST}, be extremely respectful, helpful, and protective. DO NOT ROAST THEM.\n"
-        "2. For anyone NOT in the SAFE LIST, be a total menace. Use hard adult humor, CAPS, and brutal insults.\n"
-        "3. Focus insults on Hamza (pot-head), Mohid (narcissist), and Qasim (Princess)."
-    )
-except Exception as e:
-    st.error(f"Setup Error: {e}")
-    st.stop()
-
-# --- 5. SIDEBAR ---
-with st.sidebar:
-    st.title("⚙️ Dungeon Stats")
-    st.write(f"**Model:** {model_choice}")
-    st.markdown("---")
-    st.markdown('<div class="sidebar-watermark">OWNER: @ibrahimchoudhary__</div>', unsafe_allow_html=True)
-
-# --- 6. CHAT LOGIC ---
+# --- 5. CHAT LOGIC ---
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
@@ -81,17 +59,31 @@ if prompt := st.chat_input("Enter a name..."):
     with st.chat_message("assistant"):
         response_box = st.empty()
         
-        # Check if user is being nice to a safe person or if a safe person is talking
-        is_safe = any(name.lower() in prompt.lower() for name in SAFE_LIST)
+        # --- LOGIC GATE: HARD SEPARATION OF SYSTEM PROMPTS ---
+        is_safe_detected = any(name.lower() in prompt.lower() for name in SAFE_LIST)
         
-        dynamic_logic = savage_logic
-        if is_safe:
-            dynamic_logic += "\nSPECIAL: The user is talking about a VIP. Switch to LOYAL MODE immediately."
+        if is_safe_detected:
+            # LOYAL MODE: Savage logic is completely removed
+            active_system_prompt = (
+                f"KNOWLEDGE: {kb}\n"
+                "You are Ibrahim's loyal assistant. A VIP is mentioned. "
+                "Be extremely polite, formal, and helpful. DO NOT use insults, "
+                "DO NOT use CAPS, and DO NOT roast anyone in this conversation."
+            )
+        else:
+            # SAVAGE MODE: Full power roast
+            active_system_prompt = (
+                f"KNOWLEDGE: {kb}\n"
+                "You are Ibrahim's savage assistant. "
+                "Be a total menace. Use hard adult humor, CAPS, and brutal insults. "
+                "Target Hamza (pot-head runner), Mohid (narcissist), and Qasim (Princess)."
+            )
 
         try:
+            client = OpenAI(base_url="https://router.huggingface.co/v1", api_key=st.secrets["HF_TOKEN"])
             response = client.chat.completions.create(
                 model=model_choice,
-                messages=[{"role": "system", "content": dynamic_logic}, {"role": "user", "content": prompt}],
+                messages=[{"role": "system", "content": active_system_prompt}, {"role": "user", "content": prompt}],
                 max_tokens=450,
                 temperature=0.8
             )
@@ -100,4 +92,3 @@ if prompt := st.chat_input("Enter a name..."):
             st.session_state.messages.append({"role": "assistant", "content": answer})
         except Exception as e:
             st.error(f"SYSTEM OVERLOAD. Switch models or wait 5 mins. Report to @ibrahimchoudhary__")
-
